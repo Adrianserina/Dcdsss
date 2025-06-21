@@ -20,6 +20,10 @@ import {
   LogOut,
 } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
+import { NotificationSystem } from "./notification-system"
+import { AppointmentBooking } from "./appointment-booking"
+import { DocumentUpload } from "./document-upload"
+import { useOfflineMode } from "../lib/offline-service"
 
 interface FamilyDashboardProps {
   userId: string
@@ -29,6 +33,7 @@ interface FamilyDashboardProps {
 
 export function FamilyDashboard({ userId, userRole, onLogout }: FamilyDashboardProps) {
   const [activeTab, setActiveTab] = useState("overview")
+  const { isOnline, pendingSync, syncData } = useOfflineMode()
 
   const getRoleDisplayName = (role: string) => {
     return role === "parent" ? "Parent/Caregiver" : "Guardian"
@@ -71,6 +76,17 @@ export function FamilyDashboard({ userId, userRole, onLogout }: FamilyDashboardP
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <NotificationSystem userRole={userRole} />
+              {!isOnline && (
+                <Badge variant="destructive" className="text-xs">
+                  Offline
+                </Badge>
+              )}
+              {pendingSync.length > 0 && (
+                <Button onClick={syncData} variant="outline" size="sm">
+                  Sync ({pendingSync.length})
+                </Button>
+              )}
               <ThemeToggle />
               <Button variant="outline" size="sm">
                 <Settings className="w-4 h-4 mr-2" />
@@ -147,11 +163,13 @@ export function FamilyDashboard({ userId, userRole, onLogout }: FamilyDashboardP
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
             <TabsTrigger value="care-plan">Care Plan</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="book-appointment">Book</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -374,6 +392,14 @@ export function FamilyDashboard({ userId, userRole, onLogout }: FamilyDashboardP
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="documents">
+            <DocumentUpload userRole={userRole} />
+          </TabsContent>
+
+          <TabsContent value="book-appointment">
+            <AppointmentBooking userRole={userRole} />
           </TabsContent>
         </Tabs>
       </div>

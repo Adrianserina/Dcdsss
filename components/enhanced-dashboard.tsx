@@ -6,7 +6,19 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { TrendingUp, AlertTriangle, Users, Brain, Activity, Shield, Target, Settings, LogOut } from "lucide-react"
+import {
+  TrendingUp,
+  AlertTriangle,
+  Users,
+  Brain,
+  Activity,
+  Shield,
+  Target,
+  Settings,
+  LogOut,
+  MessageSquare,
+  X,
+} from "lucide-react"
 import { TrendChart } from "./trend-chart"
 import { RiskHeatmap } from "./risk-heatmap"
 import { CaseTimeline } from "./case-timeline"
@@ -14,6 +26,12 @@ import { AIInsightsPanel } from "./ai-insights-panel"
 import { ThemeToggle } from "./theme-toggle"
 import { QuickReferenceSidebar } from "./quick-reference-sidebar"
 import { ResourceIndex } from "./resource-index"
+import { NotificationSystem } from "./notification-system"
+import { AppointmentBooking } from "./appointment-booking"
+import { DocumentUpload } from "./document-upload"
+import { TeamChat } from "./team-chat"
+import { AIAnalyticsTracker } from "./ai-analytics-tracker"
+import { useOfflineMode } from "../lib/offline-service"
 
 interface DashboardProps {
   userId: string
@@ -25,9 +43,16 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
   const [activeTab, setActiveTab] = useState("overview")
   const [aiInsights, setAiInsights] = useState<any>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [showTeamChat, setShowTeamChat] = useState(false)
 
-  // Mock data - in real app, this would come from your database
-  const mockData = {
+  // Initialize offline mode with error handling
+  const offlineMode = useOfflineMode()
+  const isOnline = offlineMode?.isOnline ?? true
+  const pendingSync = offlineMode?.pendingSync ?? []
+  const syncData = offlineMode?.syncData ?? (() => {})
+
+  // Mock data with proper initialization
+  const [mockData] = useState({
     totalCases: 156,
     activeCases: 89,
     highRiskCases: 12,
@@ -42,26 +67,32 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
       { type: "Family Conflict", count: 5, severity: "critical" as const },
       { type: "Financial Issues", count: 12, severity: "medium" as const },
     ],
-  }
+  })
 
   const runAIAnalysis = async () => {
     setIsAnalyzing(true)
-    // Simulate AI analysis
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setAiInsights({
-      riskScore: 7.2,
-      keyInsights: [
-        "Increased mental health cases in North district",
-        "Resource allocation efficiency down 12%",
-        "Family support services showing positive outcomes",
-      ],
-      recommendations: [
-        "Deploy additional mental health specialists to North district",
-        "Review resource allocation algorithms",
-        "Expand family support program capacity",
-      ],
-    })
-    setIsAnalyzing(false)
+    try {
+      // Simulate AI analysis
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const newInsights = {
+        riskScore: 7.2,
+        keyInsights: [
+          "Increased mental health cases in North district",
+          "Resource allocation efficiency down 12%",
+          "Family support services showing positive outcomes",
+        ],
+        recommendations: [
+          "Deploy additional mental health specialists to North district",
+          "Review resource allocation algorithms",
+          "Expand family support program capacity",
+        ],
+      }
+      setAiInsights(newInsights)
+    } catch (error) {
+      console.error("AI Analysis failed:", error)
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const getRoleDisplayName = (role: string) => {
@@ -76,6 +107,10 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
     return roleMap[role] || role
   }
 
+  const handleAIInsightsUpdate = (insights: any) => {
+    setAiInsights(insights)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -88,10 +123,21 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
                 <p className="text-sm text-muted-foreground">Welcome back, {getRoleDisplayName(userRole)}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button onClick={runAIAnalysis} disabled={isAnalyzing} variant="outline" size="sm">
-                <Brain className="w-4 h-4 mr-2" />
-                {isAnalyzing ? "Analyzing..." : "Run AI Analysis"}
+            <div className="flex items-center space-x-2">
+              <NotificationSystem userRole={userRole} />
+              {!isOnline && (
+                <Badge variant="destructive" className="text-xs">
+                  Offline
+                </Badge>
+              )}
+              {pendingSync.length > 0 && (
+                <Button onClick={syncData} variant="outline" size="sm">
+                  Sync ({pendingSync.length})
+                </Button>
+              )}
+              <Button onClick={() => setShowTeamChat(!showTeamChat)} variant="outline" size="sm">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Team Chat
               </Button>
               <ThemeToggle />
               <Button variant="outline" size="sm">
@@ -108,6 +154,9 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
       </div>
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* AI Analytics Tracker - Prominent placement */}
+        <AIAnalyticsTracker userRole={userRole} onInsightsUpdate={handleAIInsightsUpdate} />
+
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
@@ -156,7 +205,7 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
         </div>
 
         {/* AI Insights Alert */}
-        {aiInsights && (
+        {aiInsights && aiInsights.keyInsights && (
           <Alert className="border-l-4 border-l-primary">
             <Brain className="h-4 w-4" />
             <AlertTitle>AI Analysis Complete</AlertTitle>
@@ -166,7 +215,7 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
                 {aiInsights.riskScore}/10
               </Badge>
               <div className="mt-2 space-y-1">
-                {aiInsights.keyInsights.map((insight: string, index: number) => (
+                {(aiInsights.keyInsights || []).map((insight: string, index: number) => (
                   <div key={index} className="text-sm">
                     • {insight}
                   </div>
@@ -180,13 +229,15 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="grid w-full grid-cols-8">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="trends">Trends</TabsTrigger>
                 <TabsTrigger value="risks">Risk Map</TabsTrigger>
                 <TabsTrigger value="cases">Cases</TabsTrigger>
                 <TabsTrigger value="insights">AI Insights</TabsTrigger>
                 <TabsTrigger value="resources">Resources</TabsTrigger>
+                <TabsTrigger value="appointments">Appointments</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
@@ -200,7 +251,7 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {mockData.trends.map((trend, index) => (
+                        {(mockData.trends || []).map((trend, index) => (
                           <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                             <div>
                               <div className="font-medium">{trend.category}</div>
@@ -233,7 +284,7 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {mockData.redFlags.map((flag, index) => (
+                        {(mockData.redFlags || []).map((flag, index) => (
                           <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                             <div>
                               <div className="font-medium">{flag.type}</div>
@@ -275,6 +326,14 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
               <TabsContent value="resources">
                 <ResourceIndex userRole={userRole} />
               </TabsContent>
+
+              <TabsContent value="appointments">
+                <AppointmentBooking userRole={userRole} />
+              </TabsContent>
+
+              <TabsContent value="documents">
+                <DocumentUpload userRole={userRole} />
+              </TabsContent>
             </Tabs>
           </div>
 
@@ -289,6 +348,25 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
           </div>
         </div>
       </div>
+
+      {/* Team Chat Overlay */}
+      {showTeamChat && (
+        <div className="fixed bottom-4 right-4 w-96 h-96 z-50">
+          <Card className="h-full shadow-lg">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Team Chat</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setShowTeamChat(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 h-full">
+              <TeamChat userRole={userRole} userId={userId} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
