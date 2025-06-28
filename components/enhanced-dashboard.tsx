@@ -18,6 +18,9 @@ import {
   LogOut,
   MessageSquare,
   X,
+  Mic,
+  MapPin,
+  Fingerprint,
 } from "lucide-react"
 import { TrendChart } from "./trend-chart"
 import { RiskHeatmap } from "./risk-heatmap"
@@ -31,6 +34,9 @@ import { AppointmentBooking } from "./appointment-booking"
 import { DocumentUpload } from "./document-upload"
 import { TeamChat } from "./team-chat"
 import { AIAnalyticsTracker } from "./ai-analytics-tracker"
+import { VoiceCommands } from "./voice-commands"
+import { GeolocationTracker } from "./geolocation-tracker"
+import { BiometricSecurity } from "./biometric-security"
 import { useOfflineMode } from "../lib/offline-service"
 
 interface DashboardProps {
@@ -44,6 +50,9 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
   const [aiInsights, setAiInsights] = useState<any>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showTeamChat, setShowTeamChat] = useState(false)
+  const [showVoiceCommands, setShowVoiceCommands] = useState(false)
+  const [showGeolocation, setShowGeolocation] = useState(false)
+  const [showBiometric, setShowBiometric] = useState(false)
 
   // Initialize offline mode with error handling
   const offlineMode = useOfflineMode()
@@ -69,32 +78,6 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
     ],
   })
 
-  const runAIAnalysis = async () => {
-    setIsAnalyzing(true)
-    try {
-      // Simulate AI analysis
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      const newInsights = {
-        riskScore: 7.2,
-        keyInsights: [
-          "Increased mental health cases in North district",
-          "Resource allocation efficiency down 12%",
-          "Family support services showing positive outcomes",
-        ],
-        recommendations: [
-          "Deploy additional mental health specialists to North district",
-          "Review resource allocation algorithms",
-          "Expand family support program capacity",
-        ],
-      }
-      setAiInsights(newInsights)
-    } catch (error) {
-      console.error("AI Analysis failed:", error)
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
   const getRoleDisplayName = (role: string) => {
     const roleMap: { [key: string]: string } = {
       "social-worker": "Social Worker",
@@ -109,6 +92,42 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
 
   const handleAIInsightsUpdate = (insights: any) => {
     setAiInsights(insights)
+  }
+
+  const handleVoiceCommand = (command: string, data?: any) => {
+    switch (command) {
+      case "navigate":
+        if (data?.tab) {
+          setActiveTab(data.tab)
+        }
+        break
+      case "action":
+        if (data?.type === "ai-analysis") {
+          // Trigger AI analysis
+        } else if (data?.type === "emergency") {
+          // Handle emergency alert
+          alert("Emergency protocol activated")
+        }
+        break
+      case "contact":
+        // Handle contact actions
+        break
+    }
+  }
+
+  const handleLocationUpdate = (location: any) => {
+    console.log("Location updated:", location)
+    // Handle location updates for professional users
+  }
+
+  const handleBiometricAuth = (method: string) => {
+    console.log("Authenticated with:", method)
+    // Handle successful biometric authentication
+  }
+
+  const handleBiometricError = (error: string) => {
+    console.error("Biometric auth error:", error)
+    // Handle authentication errors
   }
 
   return (
@@ -135,6 +154,18 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
                   Sync ({pendingSync.length})
                 </Button>
               )}
+              <Button onClick={() => setShowVoiceCommands(!showVoiceCommands)} variant="outline" size="sm">
+                <Mic className="w-4 h-4 mr-2" />
+                Voice
+              </Button>
+              <Button onClick={() => setShowGeolocation(!showGeolocation)} variant="outline" size="sm">
+                <MapPin className="w-4 h-4 mr-2" />
+                Location
+              </Button>
+              <Button onClick={() => setShowBiometric(!showBiometric)} variant="outline" size="sm">
+                <Fingerprint className="w-4 h-4 mr-2" />
+                Security
+              </Button>
               <Button onClick={() => setShowTeamChat(!showTeamChat)} variant="outline" size="sm">
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Team Chat
@@ -337,14 +368,24 @@ export function EnhancedDashboard({ userId, userRole, onLogout }: DashboardProps
             </Tabs>
           </div>
 
-          {/* Mobile Quick Reference - show on small screens */}
-          <div className="lg:hidden">
-            <QuickReferenceSidebar userRole={userRole} />
-          </div>
-
           {/* Desktop Sidebar */}
           <div className="hidden lg:block w-80 space-y-4">
             <QuickReferenceSidebar userRole={userRole} />
+
+            {/* Voice Commands Panel */}
+            {showVoiceCommands && <VoiceCommands userRole={userRole} onCommand={handleVoiceCommand} />}
+
+            {/* Geolocation Panel */}
+            {showGeolocation && <GeolocationTracker userRole={userRole} onLocationUpdate={handleLocationUpdate} />}
+
+            {/* Biometric Security Panel */}
+            {showBiometric && (
+              <BiometricSecurity
+                userRole={userRole}
+                onAuthSuccess={handleBiometricAuth}
+                onAuthFailure={handleBiometricError}
+              />
+            )}
           </div>
         </div>
       </div>
