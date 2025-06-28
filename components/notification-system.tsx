@@ -4,294 +4,199 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Bell, AlertTriangle, CheckCircle2, X, Flag, Brain } from "lucide-react"
+import { Bell, X, AlertTriangle, Calendar, MessageSquare, Users, CheckCircle } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface Notification {
   id: string
-  type: "urgent" | "warning" | "info" | "success" | "ai-alert"
+  type: "urgent" | "appointment" | "message" | "update" | "success"
   title: string
   message: string
   timestamp: Date
-  caseId?: string
-  clientName?: string
   read: boolean
-  actionRequired: boolean
-  aiGenerated?: boolean
+  actionUrl?: string
 }
 
-export function NotificationSystem() {
+interface NotificationSystemProps {
+  userRole: string
+}
+
+export function NotificationSystem({ userRole }: NotificationSystemProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
-    // Initialize with mock notifications
+    // Simulate receiving notifications
     const mockNotifications: Notification[] = [
       {
         id: "1",
         type: "urgent",
-        title: "Critical Case Alert",
-        message: "Sarah Johnson (Case #C001) has missed 2 consecutive appointments. Immediate follow-up required.",
-        timestamp: new Date(Date.now() - 30 * 60 * 1000),
-        caseId: "C001",
-        clientName: "Sarah Johnson",
+        title: "High Risk Case Alert",
+        message: "Case SC-2024-003 requires immediate attention",
+        timestamp: new Date(Date.now() - 5 * 60 * 1000),
         read: false,
-        actionRequired: true,
       },
       {
         id: "2",
-        type: "ai-alert",
-        title: "AI Risk Assessment Alert",
-        message: "Behavioral pattern analysis indicates increased risk factors for Michael Chen. Review recommended.",
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        caseId: "C002",
-        clientName: "Michael Chen",
+        type: "appointment",
+        title: "Upcoming Appointment",
+        message: "Family meeting scheduled in 30 minutes",
+        timestamp: new Date(Date.now() - 10 * 60 * 1000),
         read: false,
-        actionRequired: true,
-        aiGenerated: true,
       },
       {
         id: "3",
-        type: "warning",
-        title: "Documentation Overdue",
-        message: "Case report for Emma Davis is 3 days overdue. Please complete by end of day.",
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-        caseId: "C003",
-        clientName: "Emma Davis",
-        read: false,
-        actionRequired: true,
+        type: "message",
+        title: "New Message",
+        message: "Sarah Martinez sent you a message",
+        timestamp: new Date(Date.now() - 15 * 60 * 1000),
+        read: true,
       },
       {
         id: "4",
-        type: "info",
-        title: "Schedule Reminder",
-        message: "You have 3 home visits scheduled for tomorrow. Review your calendar.",
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
+        type: "update",
+        title: "Case Update",
+        message: "Care plan has been updated for Emma Johnson",
+        timestamp: new Date(Date.now() - 30 * 60 * 1000),
         read: true,
-        actionRequired: false,
-      },
-      {
-        id: "5",
-        type: "success",
-        title: "Case Milestone Achieved",
-        message: "Robert Wilson has successfully completed his housing stability program.",
-        timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000),
-        caseId: "C004",
-        clientName: "Robert Wilson",
-        read: true,
-        actionRequired: false,
       },
     ]
 
     setNotifications(mockNotifications)
-    setUnreadCount(mockNotifications.filter((n) => !n.read).length)
 
     // Simulate real-time notifications
     const interval = setInterval(() => {
-      generateAINotification()
-    }, 30000) // Every 30 seconds
+      const newNotification: Notification = {
+        id: Date.now().toString(),
+        type: Math.random() > 0.5 ? "message" : "update",
+        title: "New Update",
+        message: "You have a new update in your dashboard",
+        timestamp: new Date(),
+        read: false,
+      }
+
+      setNotifications((prev) => [newNotification, ...prev.slice(0, 9)])
+    }, 30000) // New notification every 30 seconds
 
     return () => clearInterval(interval)
   }, [])
 
-  const generateAINotification = async () => {
-    // Simulate AI-generated notifications based on case analysis
-    const aiNotifications = [
-      {
-        type: "ai-alert" as const,
-        title: "Predictive Analytics Alert",
-        message: "AI model predicts 85% likelihood of case escalation for Lisa Anderson within 7 days.",
-        caseId: "C005",
-        clientName: "Lisa Anderson",
-      },
-      {
-        type: "ai-alert" as const,
-        title: "Behavioral Pattern Detected",
-        message: "Unusual communication pattern detected. Client may be experiencing increased stress.",
-        caseId: "C001",
-        clientName: "Sarah Johnson",
-      },
-      {
-        type: "ai-alert" as const,
-        title: "Resource Optimization Suggestion",
-        message: "AI recommends reallocating resources from low-risk to high-risk cases this week.",
-      },
-    ]
-
-    const randomNotification = aiNotifications[Math.floor(Math.random() * aiNotifications.length)]
-
-    const newNotification: Notification = {
-      id: Date.now().toString(),
-      ...randomNotification,
-      timestamp: new Date(),
-      read: false,
-      actionRequired: true,
-      aiGenerated: true,
-    }
-
-    setNotifications((prev) => [newNotification, ...prev])
-    setUnreadCount((prev) => prev + 1)
-  }
+  const unreadCount = notifications.filter((n) => !n.read).length
 
   const markAsRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
-    setUnreadCount((prev) => Math.max(0, prev - 1))
   }
 
-  const dismissNotification = (id: string) => {
+  const markAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+  }
+
+  const removeNotification = (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
-    const notification = notifications.find((n) => n.id === id)
-    if (notification && !notification.read) {
-      setUnreadCount((prev) => Math.max(0, prev - 1))
-    }
   }
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "urgent":
-        return AlertTriangle
-      case "warning":
-        return Flag
-      case "info":
-        return Bell
+        return <AlertTriangle className="w-4 h-4 text-red-500" />
+      case "appointment":
+        return <Calendar className="w-4 h-4 text-blue-500" />
+      case "message":
+        return <MessageSquare className="w-4 h-4 text-green-500" />
+      case "update":
+        return <Users className="w-4 h-4 text-purple-500" />
       case "success":
-        return CheckCircle2
-      case "ai-alert":
-        return Brain
+        return <CheckCircle className="w-4 h-4 text-green-500" />
       default:
-        return Bell
+        return <Bell className="w-4 h-4" />
     }
   }
 
-  const getNotificationColor = (type: string) => {
-    switch (type) {
-      case "urgent":
-        return "border-red-200 bg-red-50"
-      case "warning":
-        return "border-orange-200 bg-orange-50"
-      case "info":
-        return "border-blue-200 bg-blue-50"
-      case "success":
-        return "border-green-200 bg-green-50"
-      case "ai-alert":
-        return "border-purple-200 bg-purple-50"
-      default:
-        return "border-gray-200 bg-gray-50"
-    }
-  }
-
-  const formatTimestamp = (timestamp: Date) => {
+  const getTimeAgo = (timestamp: Date) => {
     const now = new Date()
     const diff = now.getTime() - timestamp.getTime()
     const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
 
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    return `${days}d ago`
+    if (days > 0) return `${days}d ago`
+    if (hours > 0) return `${hours}h ago`
+    if (minutes > 0) return `${minutes}m ago`
+    return "Just now"
   }
 
   return (
-    <div className="relative">
-      <Button variant="ghost" size="sm" onClick={() => setIsOpen(!isOpen)} className="relative">
-        <Bell className="h-4 w-4" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </Button>
-
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-          <Card className="border-0">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Notifications</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
-                  <X className="h-4 w-4" />
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="relative">
+          <Bell className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="end">
+        <Card className="border-0 shadow-none">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Notifications</CardTitle>
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+                  Mark all read
                 </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-96">
-                <div className="space-y-2 p-4">
-                  {notifications.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No notifications</p>
-                    </div>
-                  ) : (
-                    notifications.map((notification) => {
-                      const IconComponent = getNotificationIcon(notification.type)
-                      return (
-                        <div
-                          key={notification.id}
-                          className={`p-3 rounded-lg border ${getNotificationColor(notification.type)} ${
-                            !notification.read ? "border-l-4 border-l-blue-500" : ""
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3 flex-1">
-                              <IconComponent className="h-4 w-4 mt-0.5" />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-2 mb-1">
-                                  <h4 className="font-medium text-sm">{notification.title}</h4>
-                                  {notification.aiGenerated && (
-                                    <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800">
-                                      AI
-                                    </Badge>
-                                  )}
-                                  {notification.actionRequired && (
-                                    <Badge variant="outline" className="text-xs bg-red-100 text-red-800">
-                                      Action Required
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-xs text-gray-600 mb-2">{notification.message}</p>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-gray-500">
-                                    {formatTimestamp(notification.timestamp)}
-                                  </span>
-                                  {notification.clientName && (
-                                    <span className="text-xs text-gray-500">{notification.clientName}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-1 ml-2">
-                              {!notification.read && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => markAsRead(notification.id)}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <CheckCircle2 className="h-3 w-3" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => dismissNotification(notification.id)}
-                                className="h-6 w-6 p-0"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-96 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">No notifications</div>
+              ) : (
+                <div className="space-y-1">
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`p-3 border-b hover:bg-muted/50 cursor-pointer ${
+                        !notification.read ? "bg-blue-50 dark:bg-blue-950/20" : ""
+                      }`}
+                      onClick={() => markAsRead(notification.id)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3 flex-1">
+                          {getNotificationIcon(notification.type)}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm">{notification.title}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{notification.message}</div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {getTimeAgo(notification.timestamp)}
                             </div>
                           </div>
                         </div>
-                      )
-                    })
-                  )}
+                        <div className="flex items-center gap-1">
+                          {!notification.read && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              removeNotification(notification.id)
+                            }}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </PopoverContent>
+    </Popover>
   )
 }
